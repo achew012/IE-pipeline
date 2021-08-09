@@ -1,5 +1,5 @@
-shared/models
-shared/data
+shared/models/*
+shared/data/*
 gen-arg/checkpoints
 gen-arg/preprocessed_ACE
 dygiepp/data
