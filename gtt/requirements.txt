@@ -1,0 +1,9 @@
+torch==1.4.0
+transformers==2.4.1
+pytorch-lightning==0.7.1
+seqeval
+
+jsonlines
+fastapi==0.63.0
+uvicorn==0.13.4
+gunicorn

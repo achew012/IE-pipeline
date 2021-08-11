@@ -3,3 +3,4 @@ shared/data/*
 gen-arg/checkpoints
 gen-arg/preprocessed_ACE
 dygiepp/data
+gtt/data

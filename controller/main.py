@@ -36,7 +36,7 @@ def main():
         wikievent_triggers = [{key:doc[key] for key in doc.keys() if key not in ['ner', 'events']} for doc in wikievent_triggers]
         to_jsonl('/outputs/triggers.jsonl', wikievent_triggers)
 
-        ### Dygiepp to Wikievents approach (KIV)
+        ### Dygiepp to Wikievents approach (KIV - take dygiepp triggers and entities and merge them with the wikievent dict)
         # TRIGGER {"id": "road_ied_8-E1", "event_type": "Life.Die.Unspecified", "trigger": {"start": 2, "end": 3, "text": "kills", "sent_idx": 0}, "arguments": [{"entity_id": "road_ied_8-T3", "role": "Victim", "text": "general"}, {"entity_id": "road_ied_8-T4", "role": "Place", "text": "Syria"}]}
         # ENTITY {"id": "road_ied_8-T1", "sent_idx": 0, "start": 1, "end": 2, "entity_type": "WEA", "mention_type": "UNK", "text": "IED"}
         #wikievent_triggers = [{'doc_key': doc['doc_key'], 'sentences': doc['sentences'], 'triggers': doc['predicted_events'], 'entities': doc['predicted_ner']} for doc in wikievent_triggers]

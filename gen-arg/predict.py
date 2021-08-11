@@ -22,43 +22,48 @@ from src.genie.model import GenIEModel
 
 #logger = logging.getLogger(__name__)
 
+args = {
+        'model': 'gen', 
+        'dataset': 'ACE', 
+        'tmp_dir': None, 
+        'ckpt_name': 'gen-ACE-pred', 
+        'load_ckpt': '/models/genarg.ckpt', 
+        'train_file': 'intermediate.jsonl', 
+        'val_file': 'intermediate.jsonl', 
+        'test_file': 'intermediate.jsonl', 
+        'input_dir': None, 
+        'coref_dir': 'data/kairos/coref_outputs', 
+        'use_info': False, 'mark_trigger': False, 
+        'sample_gen': False, 
+        'train_batch_size': 2, 
+        'eval_batch_size': 2, 
+        'eval_only': False, 
+        'learning_rate': 5e-05, 
+        'accumulate_grad_batches': 1, 
+        'weight_decay': 0.0, 
+        'adam_epsilon': 1e-08, 
+        'gradient_clip_val': 1.0, 
+        'num_train_epochs': 3, 
+        'max_steps': -1, 
+        'warmup_steps': 0, 
+        'gpus': -1, 
+        'seed': 42, 
+        'fp16': False, 
+        'threads': 1, 
+        'ckpt_dir': './checkpoints/gen-ACE-pred'
+        }
+
+# Cold Start
+model = GenIEModel(args)
+if args['load_ckpt']:
+    model.load_state_dict(torch.load(args['load_ckpt'] ,map_location=model.device)['state_dict']) 
+
 def to_jsonl(filename:str, file_obj):
     resultfile = open(filename, 'wb')
     writer = jsonlines.Writer(resultfile)
     writer.write_all(file_obj)
 
-def main():
-
-    args = {
-            'model': 'gen', 
-            'dataset': 'ACE', 
-            'tmp_dir': None, 
-            'ckpt_name': 'gen-ACE-pred', 
-            'load_ckpt': '/models/genarg.ckpt', 
-            'train_file': 'intermediate.jsonl', 
-            'val_file': 'intermediate.jsonl', 
-            'test_file': 'intermediate.jsonl', 
-            'input_dir': None, 
-            'coref_dir': 'data/kairos/coref_outputs', 
-            'use_info': False, 'mark_trigger': False, 
-            'sample_gen': False, 
-            'train_batch_size': 2, 
-            'eval_batch_size': 2, 
-            'eval_only': False, 
-            'learning_rate': 5e-05, 
-            'accumulate_grad_batches': 1, 
-            'weight_decay': 0.0, 
-            'adam_epsilon': 1e-08, 
-            'gradient_clip_val': 1.0, 
-            'num_train_epochs': 3, 
-            'max_steps': -1, 
-            'warmup_steps': 0, 
-            'gpus': -1, 
-            'seed': 42, 
-            'fp16': False, 
-            'threads': 1, 
-            'ckpt_dir': './checkpoints/gen-ACE-pred'
-            }
+def main(args, model):
 
     if not args['ckpt_name']:
         d = datetime.now() 
@@ -90,7 +95,6 @@ def main():
     # lr_logger = LearningRateMonitor() 
     # tb_logger = TensorBoardLogger('logs/')
 
-    model = GenIEModel(args)
     if args['dataset'] == 'ACE':
         dm = ACEDataModule(args)
     elif args['dataset'] == 'KAIROS':
@@ -112,9 +116,6 @@ def main():
         precision=16 if args['fp16'] else 32,
         callbacks = None,
     ) 
-
-    if args['load_ckpt']:
-        model.load_state_dict(torch.load(args['load_ckpt'] ,map_location=model.device)['state_dict']) 
 
     dm.prepare_data() 
     test_loader = dm.test_dataloader()
@@ -145,7 +146,7 @@ async def read_root(request: Request):
         if lock.locked():
             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
         async with lock:
-            result = main()
+            result = main(args, model)
             torch.cuda.empty_cache()
             return result
     else:

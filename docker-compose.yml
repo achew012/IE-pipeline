@@ -31,6 +31,22 @@ services:
             - ./dygiepp:/app
             - ./shared/models/dygiepp:/models 
 
+    gtt:
+        build:
+            context: ./gtt
+            dockerfile: Dockerfile
+        command: uvicorn model_gtt.predict:app --host 0.0.0.0 --port 5003 --reload
+        # command: gunicorn -w 2 -b 0.0.0.0:5000 wsgi:app
+        restart: always
+        ports:
+            - "5003:5003" 
+        networks:
+            - common
+        volumes:
+            - ./gtt:/app
+            - ./shared/models/gtt:/models 
+
+
     controller:
         build:
             context: ./controller

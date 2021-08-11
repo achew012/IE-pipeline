@@ -24,6 +24,7 @@ def group_preds(preds: list):
     grouped_preds = {}    
     for pred in preds:
         doc_key = pred['doc_key'].split('-')[0]
+        pred = {**pred, 'event': pred['doc_key'].split('-')[1]}
         if pred['doc_key'] not in grouped_preds.keys():
             grouped_preds[doc_key]=[pred]
         else:

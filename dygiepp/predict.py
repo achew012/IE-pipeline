@@ -13,7 +13,6 @@ from allennlp.data import Batch
 
 import json
 import jsonlines
-
 from spacy import displacy
 
 
@@ -147,19 +146,15 @@ def convert_to_displacy(doc):
 
 def run_single_text_flow(input_text:str, pretrained_model_path:str, title='no-title', spacy_model="en_core_web_md", model_type="ace-event"):
     nlp = spacy.load(spacy_model)
-    formatted_data = format_text(title, input_text, nlp, model_type)
+    formatted_data = format_text(title, input_text, model_type, nlp, model_type)
     dataset_reader, model = get_model(pretrained_model_path)
     results = dygiepp_pretrained_predict(formatted_data, dataset_reader, model)
     return results
 
 
-def run_dataset(dataset, pretrained_model_path:str, spacy_model="en_core_web_md", model_type="ace-event"):
-    output = []
-    nlp = spacy.load(spacy_model)
-    dataset_reader, model = get_model(pretrained_model_path)
-
+def run_dataset(dataset, model, model_type, dataset_reader, nlp):
     print("Detected {} documents.".format(len(dataset)))
-
+    output = []
     for idx, doc in enumerate(dataset):
         print("Document {}".format(idx))  
         #formatted_data = format_object(doc['doc_key'], ' '.join(doc['sentences'][0]), nlp, model_type)
@@ -167,27 +162,27 @@ def run_dataset(dataset, pretrained_model_path:str, spacy_model="en_core_web_md"
         output.append(results)
     return output
 
-####################################### EXAMPLES ##############################################
+# Run cold start
+spacy_model_type="en_core_web_md"
+spacy_model = spacy.load(spacy_model_type)
+model_type="wikievent"
+pretrained_model_path='/models/dygiepp.tar.gz'
+dataset_reader, model = get_model(pretrained_model_path)
 
+####################################### EXAMPLES ##############################################
 # text='''
 # Jacinda Ardern has won a second term as New Zealand's Prime Minister after her success at handling the country's coronavirus outbreak helped secure a landslide victory.Preliminary results show that Ardern's center-left Labour Party has won 49% of the vote, meaning her party looks likely to score the highest result that any party has achieved since the current political system was introduced in 1996. That result means her party is projected to win 64 out of 120 parliamentary seats, making it the first party to be able to govern alone under the current system. Coalitions are the norm in New Zealand, where no single party has won a majority of votes in the last 24 years.
 # ''' 
-
 #ct_raw = read_json('ct.json')
-
 #results = run_dataset(ct_raw, pretrained_model_path='../data/dygiepp/models/acepp_robertabase.tar.gz', spacy_model="en_core_web_md", model_type="ace-event-plus-rams")
 #results = run_single_text_flow(text, pretrained_model_path='../data/dygiepp/models/ace-event.tar.gz', spacy_model="en_core_web_md", model_type="ace-event")
 #results = run_single_text_flow(text, pretrained_model_path='../data/dygiepp/models/acepp_robertabase.tar.gz', spacy_model="en_core_web_md", model_type="ace-event-plus-rams")
-
 #print(results)
-
 #display_results(results)
 #to_jsonl("ct_preds.jsonl", results)
-
 ################################################################################################
 
 from fastapi import FastAPI, Request
-
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from fastapi.exceptions import HTTPException
@@ -210,7 +205,7 @@ async def read_root(request: Request):
         if lock.locked():
             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
         async with lock:
-            outputs = run_dataset(data, pretrained_model_path='/models/dygiepp.tar.gz', spacy_model="en_core_web_md", model_type="wikievent")
+            outputs = run_dataset(data, model, dataset_reader, model_type, spacy_model, model_type)
             outputs = [doc for doc in outputs if "_FAILED_PREDICTION" not in doc.keys()]
             torch.cuda.empty_cache()
         return outputs
