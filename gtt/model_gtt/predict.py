@@ -478,7 +478,7 @@ class NERTransformer(BaseTransformer):
             "--data_dir",
             default=None,
             type=str,
-            required=True,
+            #required=True,
             help="The input data dir. Should contain the training files for the CoNLL-2003 NER task.",
         )
 
@@ -493,25 +493,19 @@ class NERTransformer(BaseTransformer):
 
 
 # if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     add_generic_args(parser, os.getcwd())
-#     parser = NERTransformer.add_model_specific_args(parser, os.getcwd())
-#     args = parser.parse_args()
-#     global_args = args
-#     logger.info(args)
-#     model = NERTransformer(args)
-#     trainer = generic_train(model, args)
 
-#     if args.do_predict:
-#         # See https://github.com/huggingface/transformers/issues/3159
-#         # pl use this format to create a checkpoint:
-#         # https://github.com/PyTorchLightning/pytorch-lightning/blob/master\
-#         # /pytorch_lightning/callbacks/model_checkpoint.py#L169
-#         checkpoints = list(sorted(glob.glob(os.path.join(args.output_dir, "checkpointepoch=*.ckpt"), recursive=True)))
-#         model = NERTransformer.load_from_checkpoint(checkpoints[-1])
-#         if args.debug:
-#             model.hparams.debug = True
-#         trainer.test(model)
+#Read args from config file instead, use vars() to convert namespace to dict
+config = json.load(open('config.json'))
+args = argparse.Namespace(**config['default'])
+global_args = args
+logger.info(args)
+
+model = NERTransformer(args)
+trainer = generic_train(model, args)
+model = NERTransformer.load_from_checkpoint('/models/gtt.ckpt')
+results = trainer.test(model)
+
+print(results)
 
 from fastapi import FastAPI, Request
 from typing import List, Dict, Any, Optional
@@ -523,17 +517,21 @@ from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 lock = Lock()
 app = FastAPI()
 
-@app.post("/predict")
-async def read_root(request: Request):
-    data = await request.json()
-    if data:
-        if lock.locked():
-            raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
-        async with lock:
-            result = main(args, model)
+
+#model = NERTransformer(args)
+#trainer = generic_train(model, args)
+
+# @app.post("/predict")
+# async def read_root(request: Request):
+#     data = await request.json()
+#     if data:
+#         if lock.locked():
+#             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
+#         async with lock:
+#             result = {}#main(args, model)
             
-            torch.cuda.empty_cache()
-            return result
-    else:
-        torch.cuda.empty_cache()
-        return None
+#             torch.cuda.empty_cache()
+#             return result
+#     else:
+#         torch.cuda.empty_cache()
+#         return None

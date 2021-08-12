@@ -18,8 +18,11 @@ RUN python -m pip install --upgrade pip
 WORKDIR /app
 COPY . /app
 
+ENV PYTHONPATH="${PYTHONPATH}":/app/model_gtt
+
 RUN pip install -r requirements.txt
 
-RUN export LC_ALL=C.UTF-8
-RUN export LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
 

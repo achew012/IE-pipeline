@@ -89,7 +89,7 @@ class BaseTransformer(pl.LightningModule):
                 "weight_decay": 0.0,
             },
         ]
-        optimizer = AdamW(optimizer_grouped_parameters, lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
+        optimizer = AdamW(optimizer_grouped_parameters, lr=float(self.hparams.learning_rate), eps=float(self.hparams.adam_epsilon))
         self.opt = optimizer
         return [optimizer]
 
@@ -150,14 +150,14 @@ class BaseTransformer(pl.LightningModule):
             "--model_type",
             default=None,
             type=str,
-            required=True,
+            #required=True,
             help="Model type selected in the list: " + ", ".join(MODEL_CLASSES),
         )
         parser.add_argument(
             "--model_name_or_path",
             default=None,
             type=str,
-            required=True,
+            #required=True,
             help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS),
         )
         parser.add_argument(
@@ -220,7 +220,7 @@ def add_generic_args(parser, root_dir):
         "--output_dir",
         default=None,
         type=str,
-        required=True,
+        #required=True,
         help="The output directory where the model predictions and checkpoints will be written.",
     )
 
@@ -272,7 +272,7 @@ def generic_train(model, args):
         raise ValueError("Output directory ({}) already exists and is not empty.".format(args.output_dir))
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        filepath=args.output_dir, prefix="checkpoint", monitor="val_accuracy", mode="max", save_top_k=5
+        filepath='/models/gtt.ckpt', prefix="checkpoint", monitor="val_accuracy", mode="max", save_top_k=5
     )
 
     train_params = dict(

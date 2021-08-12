@@ -205,7 +205,7 @@ async def read_root(request: Request):
         if lock.locked():
             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
         async with lock:
-            outputs = run_dataset(data, model, dataset_reader, model_type, spacy_model, model_type)
+            outputs = run_dataset(data, model, model_type, dataset_reader, spacy_model)
             outputs = [doc for doc in outputs if "_FAILED_PREDICTION" not in doc.keys()]
             torch.cuda.empty_cache()
         return outputs
