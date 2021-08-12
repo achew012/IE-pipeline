@@ -24,6 +24,10 @@ def predict_arguments(dataset):
     response = [json.loads(res) for res in response[0]['result']]
     return response, ontology
 
+def predict_templates(dataset):
+    response = requests.post('http://gtt:5003/predict', json = dataset)
+    response = response.json()
+    return response
 
 @app.get("/")
 def main():

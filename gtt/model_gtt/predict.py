@@ -20,6 +20,10 @@ role_list = ["incident_type", "PerpInd", "PerpOrg", "Target", "Victim", "Weapon"
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def to_jsonl(filename:str, file_obj):
+    resultfile = open(filename, 'wb')
+    writer = jsonlines.Writer(resultfile)
+    writer.write_all(file_obj)
 
 class NERTransformer(BaseTransformer):
     """
@@ -492,20 +496,14 @@ class NERTransformer(BaseTransformer):
         return parser
 
 
-# if __name__ == "__main__":
-
 #Read args from config file instead, use vars() to convert namespace to dict
 config = json.load(open('config.json'))
 args = argparse.Namespace(**config['default'])
 global_args = args
 logger.info(args)
-
 model = NERTransformer(args)
 trainer = generic_train(model, args)
 model = NERTransformer.load_from_checkpoint('/models/gtt.ckpt')
-results = trainer.test(model)
-
-print(results)
 
 from fastapi import FastAPI, Request
 from typing import List, Dict, Any, Optional
@@ -517,21 +515,17 @@ from starlette.status import HTTP_503_SERVICE_UNAVAILABLE
 lock = Lock()
 app = FastAPI()
 
-
-#model = NERTransformer(args)
-#trainer = generic_train(model, args)
-
-# @app.post("/predict")
-# async def read_root(request: Request):
-#     data = await request.json()
-#     if data:
-#         if lock.locked():
-#             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
-#         async with lock:
-#             result = {}#main(args, model)
-            
-#             torch.cuda.empty_cache()
-#             return result
-#     else:
-#         torch.cuda.empty_cache()
-#         return None
+@app.post("/predict")
+async def read_root(request: Request):
+    data = await request.json()
+    if data:
+        to_jsonl('{}/test.json'.format(args.data_dir), data)
+        if lock.locked():
+            raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
+        async with lock:
+            result = trainer.test(model)            
+            torch.cuda.empty_cache()
+            return result
+    else:
+        torch.cuda.empty_cache()
+        return None
