@@ -1,5 +1,6 @@
 import argparse
 import glob
+import pandas as pd
 import logging
 import os
 import json
@@ -31,6 +32,7 @@ class NERTransformer(BaseTransformer):
     def __init__(self, hparams):
         self.pad_token_label_id = CrossEntropyLoss().ignore_index
         # super(NERTransformer, self).__init__(hparams, num_labels, self.mode)
+        
         super(NERTransformer, self).__init__(hparams, self.mode)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() and self.hparams.n_gpu else "cpu")
@@ -239,6 +241,18 @@ class NERTransformer(BaseTransformer):
             tgt_position_ids = torch.cat((init_tgt_position_ids, out_position_id), dim=1)
             i += 1
 
+        # #########save prob logits
+        # temp_save = pd.DataFrame(probs.cpu().numpy())
+        # temp_torch = torch.range(0, src_input_ids.size(1)-1,dtype=int,device='cuda')
+        # temp_out_input_id = torch.index_select(src_input_ids, 1, temp_torch)
+        # temp_out_input_id = temp_out_input_id.detach().cpu().tolist()
+        # column = self.tokenizer.convert_ids_to_tokens(temp_out_input_id[0])
+        # temp_save.columns = column
+        # docids = batch[5].detach().cpu().tolist()
+        # docids_name = str(docids) + '_probs.csv'
+        # temp_save.to_csv(docids_name, index=False)
+
+
         # from out_input_id_list (pred_seq) to pred_extracts
         docids = batch[5].detach().cpu().tolist()
         pred_seq = []
@@ -400,6 +414,10 @@ class NERTransformer(BaseTransformer):
                     preds[docid] = []
                     for temp_raw in temps_extract:
                         temp = OrderedDict()
+                        template_name = temp_raw[0][0][0]
+                        with open('../data/wikievents/role_dicts.json') as f:
+                            role_dict = json.load(f)
+                        role_list = ['incident_type'] + role_dict[template_name]
                         for idx, role in enumerate(role_list):
                             temp[role] = []
                             if idx+1 > len(temp_raw):
@@ -425,14 +443,14 @@ class NERTransformer(BaseTransformer):
                     preds_log[docid]["pred_templates"] = preds[docid]
                     preds_log[docid]["gold_templates"] = golds[docid]
 
-        # evaluate
-        results = eval_tf(preds, golds)
-        for key in results:
-            if key == "micro_avg":
-                print("***************** {} *****************".format(key))
-            else:
-                print("================= {} =================".format(key))
-            print("P: {:.2f}%,  R: {:.2f}%, F1: {:.2f}%".format(results[key]["p"] * 100, results[key]["r"] * 100, results[key]["f1"] * 100)) # phi_strict
+        # # evaluate (rewrite this for it to work)
+        # results = eval_tf(preds, golds)
+        # for key in results:
+        #     if key == "micro_avg":
+        #         print("***************** {} *****************".format(key))
+        #     else:
+        #         print("================= {} =================".format(key))
+        #     print("P: {:.2f}%,  R: {:.2f}%, F1: {:.2f}%".format(results[key]["p"] * 100, results[key]["r"] * 100, results[key]["f1"] * 100)) # phi_strict
 
         logger.info("writing preds to .out file:")
         if args.debug:
@@ -509,6 +527,7 @@ if __name__ == "__main__":
         # /pytorch_lightning/callbacks/model_checkpoint.py#L169
         checkpoints = list(sorted(glob.glob(os.path.join(args.output_dir, "checkpointepoch=*.ckpt"), recursive=True)))
         model = NERTransformer.load_from_checkpoint(checkpoints[-1])
+        model.hparams = args
         if args.debug:
             model.hparams.debug = True
         trainer.test(model)

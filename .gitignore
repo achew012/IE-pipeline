@@ -4,3 +4,6 @@ gen-arg/checkpoints
 gen-arg/preprocessed_ACE
 dygiepp/data
 gtt/data
+gtt/bert-base-uncased
+gtt/lightning_logs
+

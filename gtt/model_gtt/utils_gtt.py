@@ -21,7 +21,10 @@ import os
 import json
 import numpy as np
 from collections import OrderedDict
-incident_token_to_type = {'kidnapping': 'kidnapping', 'attack': 'attack', 'bombing': 'bombing', 'robbery': 'robbery', 'arson': 'arson', 'forced': 'forced work stoppage'} # for decoding
+
+f = open("/data/wikievents/muc_format/template_dicts.json")
+incident_token_to_type = json.load(f)
+# incident_token_to_type = {'kidnapping': 'kidnapping', 'attack': 'attack', 'bombing': 'bombing', 'robbery': 'robbery', 'arson': 'arson', 'forced': 'forced work stoppage'} # for decoding
 
 logger = logging.getLogger(__name__)
 
@@ -214,8 +217,8 @@ def convert_examples_to_features(
         label_ids = []
         role_to_src_token_offset = {}
         token_offset_to_src_token_offset = {}
-        # incident_types = ['kidnapping', 'attack', 'bombing', 'robbery', 'arson', 'forced work stoppage', 'bombing / attack', 'attack / bombing']
-        incident_types = ['kidnapping', 'attack', 'bombing', 'robbery', 'arson', 'bombing / attack', 'attack / bombing']
+        # incident_types = ['kidnapping', 'attack', 'bombing', 'robbery', 'arson', 'bombing / attack', 'attack / bombing']
+        incident_types = list(incident_token_to_type.keys())
         incident_type_to_src_token_offset = {}
 
         ######### src_tokens, src_mask, src_segment_ids, src_position_ids 
@@ -239,11 +242,16 @@ def convert_examples_to_features(
         # [SEP]_template
         src_tokens.append(sep_template)
         sep_template_offset = len(src_tokens) - 1
-
+        
         # input tokens
         for idx, token in enumerate(tokens):
             src_tokens.append(token)
             token_offset_to_src_token_offset[idx] = len(src_tokens) - 1
+            if len(src_tokens)==(max_seq_length_src-1):
+                src_token_length = idx+1
+                break
+            else:
+                src_token_length = len(src_tokens)
         # [SEP]
         src_tokens.append(sep_token)
         src_segment_ids = [sequence_a_segment_id] * len(src_tokens)
@@ -297,7 +305,7 @@ def convert_examples_to_features(
                     tgt_position_ids.append(incident_type_to_src_token_offset[incident_t_token])
                 else:
                     for span in template[role]:
-                        if num_entity_span < max_num_entity_tgt and span[0] in range(len(tokens)) and span[1] in range(len(tokens)):
+                        if num_entity_span < max_num_entity_tgt and span[0] in range(src_token_length) and span[1] in range(src_token_length):
                             num_entity_span += 1
                             tgt_tokens.append(tokens[span[0]]) # span start token
                             tgt_position_ids.append(token_offset_to_src_token_offset[span[0]])
@@ -348,8 +356,8 @@ def convert_examples_to_features(
         segment_ids = src_segment_ids + tgt_segment_ids
         position_ids = src_position_ids + tgt_position_ids
 
-        if len(input_ids) != 510:
-            import ipdb; ipdb.set_trace()
+        # if len(input_ids) != 602:
+        #     import ipdb; ipdb.set_trace()
 
         # import ipdb; ipdb.set_trace()
 

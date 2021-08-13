@@ -56,20 +56,22 @@ class BaseTransformer(pl.LightningModule):
         config = AutoConfig.from_pretrained(
             self.hparams.config_name if self.hparams.config_name else self.hparams.model_name_or_path,
             **({"num_labels": num_labels} if num_labels is not None else {}),
-            cache_dir=self.hparams.cache_dir if self.hparams.cache_dir else None,
+            cache_dir=self.hparams.cache_dir if self.hparams.cache_dir else None, force_download=False,
         )
         tokenizer = AutoTokenizer.from_pretrained(
             self.hparams.tokenizer_name if self.hparams.tokenizer_name else self.hparams.model_name_or_path,
             do_lower_case=self.hparams.do_lower_case,
-            cache_dir=self.hparams.cache_dir if self.hparams.cache_dir else None,
+            cache_dir=self.hparams.cache_dir if self.hparams.cache_dir else None, force_download=False,
         )
         model = MODEL_MODES[mode].from_pretrained(
             self.hparams.model_name_or_path,
             from_tf=bool(".ckpt" in self.hparams.model_name_or_path),
             config=config,
-            cache_dir=self.hparams.cache_dir if self.hparams.cache_dir else None,
+            cache_dir=self.hparams.cache_dir if self.hparams.cache_dir else None, force_download=False,
         )
         self.config, self.tokenizer, self.model = config, tokenizer, model
+
+        
 
     def is_logger(self):
         return self.trainer.proc_rank <= 0
@@ -89,7 +91,7 @@ class BaseTransformer(pl.LightningModule):
                 "weight_decay": 0.0,
             },
         ]
-        optimizer = AdamW(optimizer_grouped_parameters, lr=float(self.hparams.learning_rate), eps=float(self.hparams.adam_epsilon))
+        optimizer = AdamW(optimizer_grouped_parameters, lr=self.hparams.learning_rate, eps=self.hparams.adam_epsilon)
         self.opt = optimizer
         return [optimizer]
 
@@ -150,14 +152,14 @@ class BaseTransformer(pl.LightningModule):
             "--model_type",
             default=None,
             type=str,
-            #required=True,
+            required=True,
             help="Model type selected in the list: " + ", ".join(MODEL_CLASSES),
         )
         parser.add_argument(
             "--model_name_or_path",
             default=None,
             type=str,
-            #required=True,
+            required=True,
             help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS),
         )
         parser.add_argument(
@@ -220,7 +222,7 @@ def add_generic_args(parser, root_dir):
         "--output_dir",
         default=None,
         type=str,
-        #required=True,
+        required=True,
         help="The output directory where the model predictions and checkpoints will be written.",
     )
 
@@ -258,6 +260,7 @@ def add_generic_args(parser, root_dir):
 def generic_train(model, args):
     # init model
     set_seed(args)
+    
 
     # Setup distant debugging if needed
     if args.server_ip and args.server_port:
@@ -268,11 +271,11 @@ def generic_train(model, args):
         ptvsd.enable_attach(address=(args.server_ip, args.server_port), redirect_output=True)
         ptvsd.wait_for_attach()
 
-    if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train:
-        raise ValueError("Output directory ({}) already exists and is not empty.".format(args.output_dir))
+    # if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train:
+    #     raise ValueError("Output directory ({}) already exists and is not empty.".format(args.output_dir))
 
     checkpoint_callback = pl.callbacks.ModelCheckpoint(
-        filepath='/models/gtt.ckpt', prefix="checkpoint", monitor="val_accuracy", mode="max", save_top_k=5
+        filepath=args.output_dir, prefix="checkpoint", monitor="val_accuracy", mode="max", save_top_k=5
     )
 
     train_params = dict(
