@@ -11,6 +11,7 @@ import torch
 from seqeval.metrics import f1_score, precision_score, recall_score, accuracy_score
 from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader, TensorDataset
+import jsonlines
 
 from transformer_base import BaseTransformer, add_generic_args, generic_train
 from utils_gtt import convert_examples_to_features, get_labels, read_examples_from_file, read_golds_from_test_file, not_sub_string, incident_token_to_type
@@ -20,6 +21,10 @@ role_list = ["incident_type", "PerpInd", "PerpOrg", "Target", "Victim", "Weapon"
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s', datefmt='%m/%d/%Y %H:%M:%S', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def to_jsonl(filename:str, file_obj):
+    resultfile = open(filename, 'wb')
+    writer = jsonlines.Writer(resultfile)
+    writer.write_all(file_obj)
 
 class NERTransformer(BaseTransformer):
     """
@@ -414,7 +419,7 @@ class NERTransformer(BaseTransformer):
                     for temp_raw in temps_extract:
                         temp = OrderedDict()
                         template_name = temp_raw[0][0][0]
-                        with open('/data/wikievents/role_dicts.json') as f:
+                        with open('/data/wikievents/muc_format/role_dicts.json') as f:
                             role_dict = json.load(f)
                         role_list = ['incident_type'] + role_dict[template_name]
                         for idx, role in enumerate(role_list):
@@ -540,10 +545,7 @@ model = NERTransformer(args)
 model.hparams = args
 
 trainer = generic_train(model, args)
-#model = NERTransformer.load_from_checkpoint('/models/checkpointepoch=49.ckpt')
-result = trainer.test(model)            
-
-print(result)
+model = NERTransformer.load_from_checkpoint('/models/gtt.ckpt')
 
 from fastapi import FastAPI, Request
 from typing import List, Dict, Any, Optional
@@ -559,11 +561,13 @@ app = FastAPI()
 async def read_root(request: Request):
     data = await request.json()
     if data:
-        to_jsonl('{}/test.json'.format(args.data_dir), data)
+        #to_jsonl('{}/test.json'.format(args.data_dir), data)
         if lock.locked():
             raise HTTPException(status_code=HTTP_503_SERVICE_UNAVAILABLE, detail="Service busy")
         async with lock:
-            #result = trainer.test(model)            
+            print('processing gtt...')
+            result = trainer.test(model)            
+            print(result)
             torch.cuda.empty_cache()
             return result
     else:

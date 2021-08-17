@@ -24,17 +24,17 @@ app = FastAPI(title="FastAPI")
 #     response = [json.loads(res) for res in response[0]['result']]
 #     return response, ontology
 
-# def predict_templates(dataset):
-#     response = requests.post('http://gtt:5003/predict', json = dataset)
-#     response = response.json()
-#     return response
+def predict_templates(dataset):
+    response = requests.post('http://gtt:5003/predict', json = dataset)
+    response = response.json()
+    return response
 
 @app.get("/")
 def main():
     print('Attempting to predict...')
     try:
         # Pass wikievents data to dygie format to extract triggers
-        #wikievent = load_jsonl('/data/wikievents/{}.jsonl'.format('test'))
+        wikievent = load_jsonl('/data/wikievents/{}.jsonl'.format('test'))
         #wikievent_in_dygiepp_fmt = wikievents2dygie(wikievent, 'test')
         #wikievent_triggers = predict_triggers(wikievent_in_dygiepp_fmt)
         #wikievent_triggers = [{key:doc[key] for key in doc.keys() if key not in ['ner', 'events']} for doc in wikievent_triggers]
@@ -55,6 +55,7 @@ def main():
         #output, unique_role_templates = combine_data_and_preds(wikievent, ontology, preds)    
         #to_jsonl('/outputs/arguments.jsonl', output)
 
+        predict_templates(wikievent)
         #print('Prediction Completed')
         output={}
         return output
