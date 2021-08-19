@@ -537,7 +537,7 @@ class NERTransformer(BaseTransformer):
 #         trainer.test(model)
 
 #Read args from config file instead, use vars() to convert namespace to dict
-config = json.load(open('config.json'))
+config = json.load(open('../config.json'))
 args = argparse.Namespace(**config['default'])
 global_args = args
 
@@ -546,6 +546,8 @@ model.hparams = args
 
 trainer = generic_train(model, args)
 model = NERTransformer.load_from_checkpoint('/models/gtt.ckpt')
+# result = trainer.test(model)            
+# print(result)
 
 from fastapi import FastAPI, Request
 from typing import List, Dict, Any, Optional
